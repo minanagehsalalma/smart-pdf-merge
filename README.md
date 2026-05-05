@@ -10,7 +10,7 @@ Merge PDFs without letting one broken scanner export ruin the whole document.
 
 It does not blindly concatenate files. It inspects every page, detects suspicious outliers, normalizes only the broken ones, and tells you exactly why.
 
-![smart-pdf-merge demo](docs/demo.svg)
+![smart-pdf-merge demo](docs/demo-gemini.png)
 
 ## Why people need this
 
