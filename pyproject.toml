@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "smart-pdf-merge"
+version = "0.1.0"
+description = "Merge PDFs intelligently by detecting oversized page canvases and normalizing broken page geometry."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "Mina Nageh Salama Zekry" }
+]
+keywords = [
+  "pdf",
+  "merge",
+  "cli",
+  "scanner",
+  "document-processing",
+  "pypdf"
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: End Users/Desktop",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Office/Business",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Utilities"
+]
+dependencies = [
+  "pypdf>=5.5.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/minanagehsalalma/smart-pdf-merge"
+Repository = "https://github.com/minanagehsalalma/smart-pdf-merge"
+Issues = "https://github.com/minanagehsalalma/smart-pdf-merge/issues"
+Changelog = "https://github.com/minanagehsalalma/smart-pdf-merge/blob/main/CHANGELOG.md"
+
+[project.scripts]
+smart-pdf-merge = "smart_pdf_merge:main"
+
+[tool.setuptools]
+py-modules = ["smart_pdf_merge"]

@@ -1,66 +1,151 @@
 # smart-pdf-merge
 
-`smart-pdf-merge` is a small Python CLI for merging PDFs when one of the inputs has broken page geometry, usually from scanner/export tools that wrap a normal image inside a gigantic PDF canvas.
+[![CI](https://github.com/minanagehsalalma/smart-pdf-merge/actions/workflows/ci.yml/badge.svg)](https://github.com/minanagehsalalma/smart-pdf-merge/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.10%2B-3776AB.svg)](https://www.python.org/)
 
-Instead of blindly concatenating files, it inspects each page and decides whether to:
+Merge PDFs without letting one broken scanner export ruin the whole document.
 
-- keep the page as-is
-- normalize the page onto a standard A4 or Letter canvas
-- print the exact reason for that decision
+`smart-pdf-merge` is a privacy-safe Python CLI for a specific real-world PDF problem: one input file has absurd page geometry, so the merged result opens with a tiny page, insane zoom, or a visually broken layout.
 
-This directly targets cases like:
+It does not blindly concatenate files. It inspects every page, detects suspicious outliers, normalizes only the broken ones, and tells you exactly why.
 
-- an ID or passport scan exported as a PDF page that is physically enormous
-- a merged file where one page appears tiny in the viewer because its media box is absurdly large
-- mixed scan sources where most pages are sane but one or two are outliers
+![smart-pdf-merge demo](docs/demo.svg)
 
-## What It Does
+## Why people need this
 
-- merges input PDFs in the exact order you pass them
-- detects suspicious page sizes with:
-  - an absolute maximum dimension threshold
-  - a relative area comparison against the page cohort median
-- rebuilds only the suspicious pages onto a standard page size by default
-- preserves sane pages unchanged unless you pass `--normalize-all`
-- keeps orientation by using portrait or landscape standard pages automatically
-- prints a human-readable report for every page
+This shows up constantly in scanned documents:
 
-## Install
+- an ID scan looks normal by itself but its PDF canvas is physically enormous
+- a passport or receipt export opens fine alone but becomes microscopic after merge
+- one page from a phone scanner wrecks the scale of an otherwise normal PDF set
+- generic merge tools succeed technically while still producing a bad document
 
-```powershell
-& 'C:\Users\ASUS\AppData\Local\Programs\Python\Python313\python.exe' -m pip install -r requirements.txt
+`smart-pdf-merge` fixes the page geometry problem at merge time.
+
+## Quick start
+
+Install from GitHub:
+
+```bash
+pip install git+https://github.com/minanagehsalalma/smart-pdf-merge.git
 ```
 
-## Usage
+Merge PDFs in order:
 
-```powershell
-& 'C:\Users\ASUS\AppData\Local\Programs\Python\Python313\python.exe' .\smart_pdf_merge.py `
-  ..\passport.pdf ..\Permesso.pdf `
-  -o ..\passport-permesso-normalized.pdf
+```bash
+smart-pdf-merge broken-scan.pdf normal-document.pdf -o merged-fixed.pdf
 ```
 
-Example output:
+Generate a machine-readable audit report too:
+
+```bash
+smart-pdf-merge broken-scan.pdf normal-document.pdf \
+  -o merged-fixed.pdf \
+  --report-json merge-report.json
+```
+
+Example CLI output:
 
 ```text
-[NORMALIZE] passport.pdf page 1: 11520.0 x 8085.6pt (160.0 x 112.3in) -> 842 x 595pt at scale 0.07012
-  reason: max dimension 11520.0pt exceeds 2000.0pt; page area 93146113pt^2 exceeds cohort median 500990pt^2 by factor 185.93
-[KEEP] Permesso.pdf page 1: 595.0 x 842.0pt (8.3 x 11.7in)
-Wrote E:\...\passport-permesso-normalized.pdf with 2 pages. Normalized 1 page(s), kept 1 page(s).
+[NORMALIZE] broken-scan.pdf page 1: 11520.0 x 8085.6pt (160.0 x 112.3in) -> 842 x 595pt at scale 0.07012
+  reason: max dimension 11520.0pt exceeds 2000.0pt; page area 93146112pt^2 exceeds cohort median 500990pt^2 by factor 185.92
+[KEEP] normal-document.pdf page 1: 595.0 x 842.0pt (8.3 x 11.7in)
+Wrote /path/to/merged-fixed.pdf with 2 pages. Normalized 1 page(s), kept 1 page(s).
 ```
 
-## Options
+## What makes it different
+
+- Detects broken page geometry instead of assuming the inputs are sane.
+- Normalizes only suspicious outlier pages by default.
+- Preserves already-correct pages unchanged.
+- Keeps portrait and landscape output sensible.
+- Produces a JSON report for automation and auditability.
+- Works well as a terminal tool, scriptable utility, or CI step.
+
+## How it decides a page is suspicious
+
+By default, the CLI marks a page for normalization when either of these is true:
+
+- its maximum dimension is larger than `2000pt`
+- its page area is more than `3x` the cohort median area
+
+That combination catches the common “looks fine visually, but the PDF canvas is nonsense” case without rebuilding every page.
+
+## Installation options
+
+From a local clone:
+
+```bash
+pip install .
+```
+
+Directly with Python:
+
+```bash
+python smart_pdf_merge.py input-a.pdf input-b.pdf -o output.pdf
+```
+
+Check the version:
+
+```bash
+smart-pdf-merge --version
+```
+
+## Command reference
+
+```text
+usage: smart_pdf_merge.py [-h] -o OUTPUT [--paper {a4,letter}] [--margin MARGIN]
+                          [--absolute-max-dimension ABSOLUTE_MAX_DIMENSION]
+                          [--relative-area-factor RELATIVE_AREA_FACTOR]
+                          [--normalize-all] [--quiet] [--report-json REPORT_JSON]
+                          [--version]
+                          inputs [inputs ...]
+```
+
+Key options:
 
 - `-o, --output`: output PDF path
-- `--paper {a4,letter}`: standard size used for normalized pages
-- `--margin`: margin in PDF points for normalized pages
-- `--absolute-max-dimension`: suspicious page threshold by max width or height
-- `--relative-area-factor`: suspicious page threshold relative to median page area
-- `--normalize-all`: normalize every page, not just outliers
-- `--quiet`: only print the final summary
+- `--paper {a4,letter}`: paper size used for normalized pages
+- `--margin`: margin in PDF points around normalized content
+- `--absolute-max-dimension`: max width or height before a page is suspicious
+- `--relative-area-factor`: outlier threshold relative to the input cohort median
+- `--normalize-all`: rebuild every page onto a standard canvas
+- `--report-json`: write a JSON decision report for downstream tooling
+- `--quiet`: print only the final summary
 
-## Why This Exists
+## Good use cases
 
-Many PDF merge tools assume the source PDFs are already sane. They are not. This tool exists for the common real-world case where a scan looks fine by itself but breaks the merged document because the scanner/exporter wrote nonsense page dimensions.
+- Merging scanned identity documents with normal PDFs
+- Fixing phone-scanner exports before upload
+- Cleaning up mixed-source document packets
+- Automating PDF normalization in scripts or ops workflows
+
+## Limitations
+
+- It targets page-geometry problems, not OCR or image enhancement.
+- It does not redact sensitive content.
+- It assumes the page content itself is visually correct and the canvas is the problem.
+
+## Development
+
+Run the test suite:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Project files worth reading:
+
+- [smart_pdf_merge.py](smart_pdf_merge.py)
+- [tests/test_smart_pdf_merge.py](tests/test_smart_pdf_merge.py)
+- [CHANGELOG.md](CHANGELOG.md)
+- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [SECURITY.md](SECURITY.md)
+
+## Privacy note
+
+Do not commit real passports, IDs, permits, invoices, or other sensitive PDFs to the repository. Reproduce bugs with redacted or synthetic samples.
 
 ## License
 

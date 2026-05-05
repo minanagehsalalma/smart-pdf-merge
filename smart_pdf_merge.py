@@ -12,12 +12,14 @@ Primary goal:
 from __future__ import annotations
 
 import argparse
+import json
 import statistics
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from pypdf import PdfReader, PdfWriter, Transformation
 
+__version__ = "0.1.0"
 
 STANDARD_PAGES = {
     "a4": (595.0, 842.0),
@@ -59,6 +61,21 @@ class SourcePage:
     @property
     def inches(self) -> tuple[float, float]:
         return (self.width / 72.0, self.height / 72.0)
+
+    def report_row(self) -> dict[str, object]:
+        return {
+            "source": self.source_label,
+            "page_number": self.page_number,
+            "width_points": round(self.width, 2),
+            "height_points": round(self.height, 2),
+            "rotation": self.rotation,
+            "orientation": self.orientation,
+            "action": self.action,
+            "reasons": self.reasons,
+            "target_width_points": None if self.target_width is None else round(self.target_width, 2),
+            "target_height_points": None if self.target_height is None else round(self.target_height, 2),
+            "scale": None if self.scale is None else round(self.scale, 6),
+        }
 
 
 def parse_args() -> argparse.Namespace:
@@ -115,6 +132,15 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Only print the final summary.",
     )
+    parser.add_argument(
+        "--report-json",
+        help="Optional path for a machine-readable JSON decision report.",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+    )
     return parser.parse_args()
 
 
@@ -142,6 +168,12 @@ def load_pages(input_paths: list[Path]) -> tuple[list[PdfReader], list[SourcePag
     return readers, pages
 
 
+def effective_dimensions(width: float, height: float, rotation: int) -> tuple[float, float]:
+    if rotation % 180 == 90:
+        return (height, width)
+    return (width, height)
+
+
 def median_reference_area(pages: list[SourcePage], absolute_max_dimension: float) -> float:
     sane_pages = [p.area for p in pages if p.max_dimension <= absolute_max_dimension]
     reference_pool = sane_pages or [p.area for p in pages]
@@ -161,26 +193,32 @@ def classify_pages(
 
     for page in pages:
         suspicious = False
+        effective_width, effective_height = effective_dimensions(page.width, page.height, page.rotation)
+        effective_max_dimension = max(effective_width, effective_height)
+        effective_area = effective_width * effective_height
 
-        if page.max_dimension > absolute_max_dimension:
+        if effective_max_dimension > absolute_max_dimension:
             suspicious = True
             page.reasons.append(
-                f"max dimension {page.max_dimension:.1f}pt exceeds "
+                f"max dimension {effective_max_dimension:.1f}pt exceeds "
                 f"{absolute_max_dimension:.1f}pt"
             )
 
-        if reference_area > 0 and page.area > reference_area * relative_area_factor:
+        if reference_area > 0 and effective_area > reference_area * relative_area_factor:
             suspicious = True
             page.reasons.append(
-                f"page area {page.area:.0f}pt^2 exceeds cohort median "
-                f"{reference_area:.0f}pt^2 by factor {page.area / reference_area:.2f}"
+                f"page area {effective_area:.0f}pt^2 exceeds cohort median "
+                f"{reference_area:.0f}pt^2 by factor {effective_area / reference_area:.2f}"
             )
 
         if normalize_all or suspicious:
-            target_w, target_h = target_dimensions(paper, page.orientation)
+            target_w, target_h = target_dimensions(
+                paper,
+                "landscape" if effective_width >= effective_height else "portrait",
+            )
             usable_w = max(target_w - (margin * 2.0), 1.0)
             usable_h = max(target_h - (margin * 2.0), 1.0)
-            scale = min(usable_w / page.width, usable_h / page.height)
+            scale = min(usable_w / effective_width, usable_h / effective_height)
 
             page.action = "normalize"
             page.target_width = target_w
@@ -262,6 +300,18 @@ def print_report(
     )
 
 
+def write_report_json(pages: list[SourcePage], output_path: Path, report_path: Path) -> None:
+    report = {
+        "output": str(output_path),
+        "page_count": len(pages),
+        "normalized_pages": sum(1 for page in pages if page.action == "normalize"),
+        "kept_pages": sum(1 for page in pages if page.action == "keep"),
+        "pages": [page.report_row() for page in pages],
+    }
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
+
+
 def validate_inputs(input_paths: list[Path], output_path: Path) -> None:
     missing = [str(path) for path in input_paths if not path.exists()]
     if missing:
@@ -277,6 +327,7 @@ def main() -> int:
     args = parse_args()
     input_paths = [Path(item).expanduser().resolve() for item in args.inputs]
     output_path = Path(args.output).expanduser().resolve()
+    report_path = Path(args.report_json).expanduser().resolve() if args.report_json else None
 
     validate_inputs(input_paths, output_path)
     _, pages = load_pages(input_paths)
@@ -294,6 +345,8 @@ def main() -> int:
         pages,
         output_path=output_path,
     )
+    if report_path:
+        write_report_json(pages, output_path, report_path)
     print_report(pages, output_path=output_path, quiet=args.quiet)
     return 0
 

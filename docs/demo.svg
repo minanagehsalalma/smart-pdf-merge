@@ -1,0 +1,20 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="630" fill="#0B1020"/>
+  <rect x="48" y="48" width="1104" height="534" rx="28" fill="#11182D" stroke="#273457" stroke-width="2"/>
+  <text x="72" y="122" fill="#F7FAFC" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="700">smart-pdf-merge</text>
+  <text x="72" y="168" fill="#A9B7D5" font-family="Segoe UI, Arial, sans-serif" font-size="26">Merge PDFs without letting one broken scanner export ruin the whole document.</text>
+  <rect x="82" y="226" width="302" height="240" rx="18" fill="#1C2742" stroke="#314267"/>
+  <rect x="172" y="246" width="122" height="196" rx="8" fill="#FFF8EF"/>
+  <rect x="208" y="272" width="50" height="150" rx="4" fill="#D9DEE9"/>
+  <text x="108" y="502" fill="#F7FAFC" font-family="Consolas, monospace" font-size="23">broken source PDF</text>
+  <text x="104" y="532" fill="#FFAE70" font-family="Consolas, monospace" font-size="18">canvas is absurdly large</text>
+  <path d="M457 342H740" stroke="#6EE7B7" stroke-width="14" stroke-linecap="round"/>
+  <path d="M715 311L772 342L715 373" stroke="#6EE7B7" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="474" y="286" fill="#6EE7B7" font-family="Consolas, monospace" font-size="22">detect outlier page geometry</text>
+  <rect x="818" y="226" width="302" height="240" rx="18" fill="#152B1F" stroke="#2F6A4F"/>
+  <rect x="870" y="254" width="198" height="184" rx="8" fill="#FFF8EF"/>
+  <rect x="925" y="278" width="88" height="136" rx="4" fill="#D9DEE9"/>
+  <text x="852" y="502" fill="#F7FAFC" font-family="Consolas, monospace" font-size="23">normalized output</text>
+  <text x="862" y="532" fill="#8DE2B0" font-family="Consolas, monospace" font-size="18">A4 / Letter, sane scale</text>
+  <text x="72" y="566" fill="#91A0BE" font-family="Segoe UI, Arial, sans-serif" font-size="20">CLI • PyPI-ready packaging • CI • JSON report for auditability</text>
+</svg>
